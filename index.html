@@ -1,128 +1,1589 @@
-<!-- FULL FIXED FILE: RhymesViperr Voting + Admin (Status & Preview FIXED) -->
-<!-- This file replaces your T123 content entirely -->
-
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-
-<!--
-ВАЖНО:
-– Админка доступна только при ?admin=1
-– Предпросмотр итогов работает через /admin/results + ADMIN_TOKEN
-– Публикация итогов работает с любым форматом backend ({key,value} или snake/camel)
--->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+/>
 
 <style>
   html { scroll-behavior: smooth; }
+
   body {
-    background:#111; color:#fff; margin:0;
-    font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+    background: #111;
+    color: #fff;
+    margin: 0;
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  }
+
+  /* ===== TOP BAR ===== */
+  #top-bar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 90px;
+    background: rgba(20, 20, 20, 0);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 40px;
+    box-sizing: border-box;
+    z-index: 10000;
+    opacity: 1;
+    transition: background 0.25s ease, opacity 0.25s ease;
+    box-shadow: none !important;
+    filter: none !important;
+  }
+  #top-bar.top-bar-scrolled { background: rgba(20, 20, 20, 1); }
+  #top-bar.top-bar-hidden { opacity: 0; pointer-events: none; }
+
+  #top-bar-left { display:flex; align-items:center; gap:24px; }
+  #top-bar-logo-wrap {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    height: 100%; display:flex; align-items:center;
+    pointer-events:none;
+  }
+  #top-bar-logo { width:200px; height:auto; pointer-events:auto; }
+  #top-bar-logo img { width:100%; height:auto; display:block; }
+
+  #top-bar-nav {
+    display:flex; gap:16px; font-size:15px; font-family:inherit; margin:0;
+    justify-content:flex-start;
+  }
+  #top-bar-nav a {
+    color:#ddd; text-decoration:none;
+    padding:8px 16px; border-radius:999px;
+    transition: background 0.12s ease, color 0.12s ease, transform 0.12s ease;
+    white-space:nowrap;
+  }
+  #top-bar-nav a:hover { background:#fff; color:#000; transform: translateY(-1px); }
+
+  #top-bar-right { display:flex; align-items:center; gap:12px; }
+  #login-status { display:flex; align-items:center; gap:6px; font-size:14px; min-height:20px; }
+
+  #tg-login-wrap { position:relative; display:inline-block; }
+  #tg-login-btn{
+    padding:10px 22px; border-radius:999px; border:none;
+    background: linear-gradient(135deg, #8b0000, #b30015);
+    color:#fff; font-size:14px; font-weight:600; cursor:pointer;
+    transition: background 0.2s ease, transform 0.2s ease;
+    box-shadow:none; outline:none; -webkit-tap-highlight-color:transparent;
+  }
+  #tg-login-btn:hover { background: linear-gradient(135deg, #a40000, #c31421); transform: translateY(-1px); }
+  #tg-login-btn:active { transform: translateY(0) scale(0.97); }
+
+  #tg-login-widget { position:absolute; inset:0; opacity:0; pointer-events:auto; }
+  #tg-login-widget iframe { width:100% !important; height:100% !important; }
+
+  #top-bar-burger{
+    display:none; width:28px; height:28px; border-radius:999px;
+    border:1px solid rgba(255,255,255,0.25);
+    background:transparent; color:#fff; font-size:18px;
+    cursor:pointer; align-items:center; justify-content:center; padding:0;
+  }
+
+  /* ===== ABOUT ===== */
+  #about-block {
+    max-width: 900px;
+    margin: 130px auto 40px;
+    padding: 24px 24px 28px;
+    border-radius: 24px;
+    background: radial-gradient(circle at top left, #2a0b0f 0, #141414 42%, #0d0d0d 100%);
+    box-shadow: 0 18px 40px rgba(0,0,0,0.8);
+  }
+  #about-block-title{ font-size:26px; font-weight:700; margin:0 0 14px; letter-spacing:0.04em; text-transform:uppercase; }
+  #about-block-sub{ font-size:15px; color:#ddd; line-height:1.55; margin-bottom:16px; }
+  #about-block-list{
+    list-style:none; padding-left:0; margin:0;
+    display:grid; grid-template-columns:minmax(0,1fr);
+    gap:10px; font-size:14px; color:#eee;
+  }
+  #about-block-list li{ position:relative; padding-left:18px; }
+  #about-block-list li::before{ content:"•"; position:absolute; left:0; top:0; color:#ff4b5c; }
+  @media (min-width: 800px){
+    #about-block-list{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+  }
+
+  #big-section-title{
+    text-align:center; font-size:48px; font-weight:800;
+    margin-top:60px; margin-bottom:50px; letter-spacing:0.025em;
+    text-shadow: 0 4px 18px rgba(0,0,0,0.6);
+  }
+
+  /* ===== NOMINATION CARDS ===== */
+  .nomination-card-outer { display:flex; flex-direction:column; align-items:center; overflow:visible; }
+  .nomination-card{
+    width:100%; aspect-ratio:1/1;
+    display:flex; flex-direction:column; align-items:center; justify-content:flex-end;
+    box-sizing:border-box; position:relative; overflow:visible;
+    border-radius:18px; background:transparent;
+    transition: transform 0.25s ease, opacity 0.25s ease;
+    border:none; cursor:default;
+  }
+  .nomination-card--center{ transform: scale(1) translateY(0px); opacity:1; }
+  .nomination-card--side{ transform: scale(0.85) translateY(12px); opacity:1 !important; pointer-events:none; }
+  .nomination-card--side .nomination-card-inner img{ filter: brightness(0.7) contrast(0.92); }
+  .nomination-card--center .nomination-card-inner img{ filter:none; }
+
+  .nomination-card-inner{
+    width:100%; height:100%; border-radius:inherit; position:relative; overflow:visible;
+    background:transparent;
+  }
+
+  .nomination-card-title-wrap{
+    margin-top:12px; visibility:hidden; opacity:0; transform: translateY(5px);
+    transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s ease;
+    display:flex; flex-direction:column; align-items:center; gap:8px;
+  }
+  .nomination-card-outer--center .nomination-card-title-wrap{ visibility:visible; opacity:1; transform: translateY(0); }
+
+  .nomination-card-title{ font-size:17px; font-weight:600; color:#fff; text-align:center; }
+
+  .vote-card-btn{
+    padding: 11px 22px;
+    border-radius: 999px;
+    border:none;
+    background: linear-gradient(135deg, #8b0000, #a00000 35%, #b30015);
+    color:#fff; font-size:13px; font-weight:600; cursor:pointer;
+    transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    white-space:nowrap;
+    box-shadow: 0 0 18px rgba(179,0,21,0.25);
+  }
+  .vote-card-btn:hover{
+    background: linear-gradient(135deg, #a40000, #b80012 40%, #c31421);
+    box-shadow: 0 0 28px rgba(200,0,25,0.35);
+    transform: translateY(-1px);
+  }
+  .vote-card-btn:active{ transform: translateY(0) scale(0.98); box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+
+  #carousel-track{ transition: transform 0.35s cubic-bezier(0.22,0.61,0.36,1); }
+
+  .bottom-nav-row{
+    width:100%; box-sizing:border-box; padding:10px 16px 0;
+    margin:0 auto; max-width:1100px;
+    display:flex; align-items:center; justify-content:center; gap:16px;
+  }
+  .vote-nav-arrow{ border:none; padding:0; background:none; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .vote-nav-arrow img{ width:40px; height:40px; display:block; filter: invert(1); }
+  .vote-nav-arrow[disabled]{ opacity:0.3; cursor:default; }
+  @media (max-width: 600px){ .vote-nav-arrow img{ width:34px; height:34px; } }
+
+  #carousel-indicator span{ color:#ddd !important; }
+  #ci-current{ color:#fff !important; font-weight:700; }
+
+  /* ===== MODAL ===== */
+  #nomination-modal[style*="display: flex"] #nomination-modal-content{ animation: modalIn 0.16s ease-out; }
+  @keyframes modalIn { from{ opacity:0; transform: translateY(6px) scale(0.97);} to{ opacity:1; transform: translateY(0) scale(1);} }
+  @keyframes modalOut { from{ opacity:1; transform: translateY(0) scale(1);} to{ opacity:0; transform: translateY(6px) scale(0.97);} }
+
+  #nomination-modal{ background: rgba(0,0,0,0.55); }
+  #nomination-modal-content{
+    background:#181818; color:#fff;
+    border-radius:20px; padding:30px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+  }
+
+  .modal-nominee-btn{
+    background:#202020; border:1px solid #333; border-radius:16px;
+    padding:14px; display:flex; flex-direction:column; align-items:center;
+    cursor:pointer;
+    transition: transform 0.1s ease, box-shadow 0.1s ease, border-color 0.1s ease, background 0.1s ease;
+  }
+  .modal-nominee-btn:hover{ background:#2a2a2a; border-color:#555; box-shadow: 0 0 20px rgba(255,255,255,0.07); }
+  .modal-nominee-btn:active{ transform: translateY(0) scale(0.99); box-shadow: 0 3px 8px rgba(0,0,0,0.6); }
+
+  .modal-nominee-img{
+    width:180px; height:180px; border-radius:14px;
+    background:#2a2a2a; overflow:hidden; margin-bottom:10px;
+  }
+  .modal-nominee-img img{ width:100%; height:100%; object-fit:cover; }
+
+  .modal-nominee-name{ font-size:15px; font-weight:600; color:#fff; }
+  .nominee-status{ font-size:12px; color:#6bd96b; min-height:16px; }
+  .modal-nominee-btn.active{ background:#3a0c10 !important; border-color:#b30015 !important; box-shadow: 0 0 25px rgba(179,0,21,0.35) !important; }
+
+  .vote-btn{
+    width:240px; height:70px;
+    background-size: contain; background-position:center; background-repeat:no-repeat;
+    background-color: transparent !important;
+    border:none !important; outline:none !important; padding:0 !important; box-shadow:none !important;
+    -webkit-appearance:none; appearance:none;
+    cursor:pointer;
+    transition: transform 0.15s ease, filter 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+    display:flex; align-items:center; justify-content:center;
+    color:#fff; font-size:16px; font-weight:600;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.45);
+    user-select:none;
+  }
+  .vote-btn:active{ transform: scale(0.97); }
+  .vote-btn.disabled{ filter: grayscale(1) brightness(0.7); cursor: default; pointer-events:none; }
+
+  #carousel-viewport{ overflow:hidden; position:relative; z-index:5 !important; }
+
+  .nomination-card-outer,.nomination-card,.nomination-card-inner,.nomination-card-inner img,.modal-nominee-img img{
+    user-select:none; -webkit-user-drag:none;
+  }
+
+  /* ===== RULES ===== */
+  #rules{ color:#ddd; }
+  #rules-inner{
+    max-width:900px; margin:0 auto 60px; padding:24px 24px 30px;
+    border-radius:24px; background:#171717;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.75);
+  }
+  #rules-inner h2{ margin:0 0 16px; font-size:24px; font-weight:700; }
+  #rules-inner p{ margin:0 0 12px; font-size:14px; line-height:1.6; color:#ddd; }
+  #rules-inner ol{ margin:0; padding-left:20px; display:flex; flex-direction:column; gap:6px; font-size:14px; }
+  #rules-inner li{ margin:0; }
+  #rules-inner li span{ color:#f6f6f6; }
+  #rules-inner ul{ margin:8px 0 0; padding-left:18px; font-size:13px; color:#ccc; }
+  #rules-inner ul li{ margin-bottom:4px; }
+
+  /* side boxes */
+  .side-box{
+    position:absolute; top:50%; transform: translateY(-50%);
+    max-height:80vh; pointer-events:none; opacity:1 !important;
+  }
+  .side-box-left{ left:0; }
+  .side-box-right{ right:0; }
+  .side-box-bottom{ z-index:-1 !important; }
+  .side-box-top{ z-index:10 !important; }
+
+  /* mobile */
+  @media (max-width: 600px){
+    #top-bar{ height:72px; padding:0 16px; }
+    #top-bar-burger{ display:inline-flex; }
+    #top-bar-nav{
+      position:absolute; left:0; right:0; top:72px;
+      padding:10px 16px 14px;
+      background: rgba(10,10,10,0.98);
+      display:none; justify-content:flex-start; gap:10px;
+      border-bottom:1px solid rgba(255,255,255,0.05);
+      z-index:9999; flex-wrap:wrap;
+    }
+    #top-bar-nav.top-bar-nav--open{ display:flex; }
+    #top-bar-nav a{ font-size:14px; }
+    #top-bar-logo{ width:150px; }
+    .side-box{ display:none !important; }
+    #about-block{ margin-top:110px; padding:20px 16px 22px; }
   }
 </style>
 
-<div id="nominations-root" style="margin-top:120px;text-align:center;">
-  Загрузка…
-</div>
-
 <script>
-(function(){
-const API_BASE="https://oscar-vote-backend.onrender.com";
-    let siteStatus = { voting_open: true, results_published: false };
-    let resultsMap = {};
-    let adminPreviewResults = false;
-
-    // чтобы админка могла включать/выключать предпросмотр
-    window.__SET_ADMIN_PREVIEW__ = function (v) {
-      adminPreviewResults = !!v;
-    };
-
-async function fetchSiteStatus(){
-  try{
-    const r=await fetch(API_BASE+"/site-status",{cache:"no-store"});
-    if(!r.ok) throw 0;
-    const d=await r.json();
-    siteStatus.votingOpen = d.votingOpen ?? d.voting_open ?? siteStatus.votingOpen;
-    siteStatus.resultsPublished = d.resultsPublished ?? d.results_published ?? siteStatus.resultsPublished;
-  }catch{}
-}
-
-async function fetchResultsForView(){
-  try{
-    if(adminPreviewResults){
-      const token=localStorage.getItem("ADMIN_TOKEN")||"";
-      const r=await fetch(API_BASE+"/admin/results",{headers:{"x-admin-token":token}});
-      if(!r.ok) return {};
-      const d=await r.json();
-      return d.results||d||{};
-    }
-    if(siteStatus.resultsPublished){
-      const r=await fetch(API_BASE+"/results");
-      if(!r.ok) return {};
-      const d=await r.json();
-      return d.results||d||{};
-    }
-    return {};
-  }catch{return {}}
-}
-
-async function init(){
-  await fetchSiteStatus();
-  const results=await fetchResultsForView();
-  const root=document.getElementById("nominations-root");
-  if(siteStatus.resultsPublished || adminPreviewResults){
-    root.innerHTML="<h2>Победители</h2><pre>"+JSON.stringify(results,null,2)+"</pre>";
-  }else{
-    root.innerHTML="<h2>Голосование активно</h2>";
+  function onTelegramAuth(user) {
+    localStorage.setItem("tgUser", JSON.stringify(user));
+    localStorage.setItem("oscarUserId", String(user.id));
+    location.reload();
   }
-}
-init();
-window.__ENABLE_ADMIN_PREVIEW__=()=>{adminPreviewResults=true;init();}
-})();
 </script>
+</head>
 
-<!-- ADMIN PANEL -->
-<div id="admin-panel" style="display:none;position:fixed;right:20px;bottom:20px;width:300px;background:#161616;padding:16px;border-radius:14px;z-index:10050;">
-  <b>Admin</b><br><br>
-  <input id="admintoken" placeholder="ADMIN_TOKEN" style="width:100%;padding:8px"><br><br>
-  <button id="save">Save token</button>
-  <button id="toggle">Toggle results</button>
-  <button id="preview">Preview</button>
-  <div id="msg" style="font-size:12px;margin-top:8px;color:#aaa"></div>
+<body>
+
+<!-- TOP BAR -->
+<div id="top-bar">
+  <div id="top-bar-left">
+    <button id="top-bar-burger" aria-label="Меню">☰</button>
+    <nav id="top-bar-nav">
+      <a href="#about-block">О премии</a>
+      <a href="#nominations-root">Номинации</a>
+      <a href="#rules">Правила</a>
+    </nav>
+  </div>
+
+  <div id="top-bar-logo-wrap">
+    <div id="top-bar-logo">
+      <img
+        src="https://res.cloudinary.com/dliwy9wkt/image/upload/v1765492479/logo_d5srbi.png"
+        alt="Премия"
+      />
+    </div>
+  </div>
+
+  <div id="top-bar-right">
+    <div id="login-status"></div>
+
+    <div id="tg-login-wrap">
+      <button id="tg-login-btn" type="button">Войти</button>
+      <div id="tg-login-widget">
+        <script
+          async
+          src="https://telegram.org/js/telegram-widget.js?22"
+          data-telegram-login="rhymesviperr2025_bot"
+          data-size="medium"
+          data-request-access="write"
+          data-lang="ru"
+          data-onauth="onTelegramAuth(user)"
+        ></script>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ABOUT -->
+<section id="about-block">
+  <h2 id="about-block-title">О премии</h2>
+  <p id="about-block-sub">
+    Эта премия создана для тех, кто живёт музыкой, текстами, вайбом и культурой.
+    Здесь нет случайных людей — только те, кто действительно присутствует в тусовке,
+    следит за релизами и понимает контекст.
+  </p>
+  <ul id="about-block-list">
+    <li>Голосуют реальные люди, а не боты и накрутки.</li>
+    <li>Каждый голос — за конкретного артиста или проект в своей категории.</li>
+    <li>Премия помогает зафиксировать момент: кто сделал этот год в культуре.</li>
+    <li>Результаты формируются прозрачно, по открытой системе голосования.</li>
+  </ul>
+</section>
+
+<h1 id="big-section-title">ОСНОВНЫЕ НОМИНАЦИИ</h1>
+
+<div id="nominations-root" style="width: 100%; margin: 20px auto 40px; font-family: inherit"></div>
+
+<!-- RULES -->
+<div id="rules">
+  <div id="rules-inner">
+    <h2>Правила голосования</h2>
+    <p>Ниже — базовые правила участия в голосовании. Пожалуйста, ознакомьтесь с ними перед тем, как отдавать свой голос.</p>
+    <ol>
+      <li>
+        <span>1. Авторизация через Telegram.</span>
+        <ul>
+          <li>Чтобы проголосовать, нужно войти через Telegram.</li>
+          <li>Один Telegram-аккаунт = один набор голосов.</li>
+        </ul>
+      </li>
+      <li>
+        <span>2. Один голос в каждой номинации.</span>
+        <ul>
+          <li>Вы можете выбрать только одного номинанта в каждой категории.</li>
+          <li>Голос можно отменить и изменить на другого кандидата, пока идёт голосование.</li>
+        </ul>
+      </li>
+      <li>
+        <span>3. Честность и уважение.</span>
+        <ul>
+          <li>Запрещены накрутки, массовые фейки и любые попытки обмануть систему.</li>
+          <li>Администрация оставляет за собой право аннулировать подозрительные голоса.</li>
+        </ul>
+      </li>
+      <li>
+        <span>4. Сроки голосования.</span>
+        <ul>
+          <li>Голосование проходит в ограниченный период, указанный на сайте/в анонсах.</li>
+          <li>После окончания голосования изменить результаты уже нельзя.</li>
+        </ul>
+      </li>
+      <li>
+        <span>5. Итоги.</span>
+        <ul>
+          <li>Победители определяются по количеству набранных голосов.</li>
+          <li>Результаты публикуются после официального закрытия голосования.</li>
+        </ul>
+      </li>
+    </ol>
+  </div>
+</div>
+
+<!-- FULLSCREEN MODAL -->
+<div id="nomination-modal"
+  style="position: fixed; inset: 0; width: 100%; height: 100%;
+         background: rgba(0, 0, 0, 0.35); display: none;
+         align-items: flex-start; justify-content: center;
+         padding-top: 50px; padding-bottom: 50px; overflow-y: auto; z-index: 9998;">
+  <div id="nomination-modal-content"
+    style="background: #181818; color: #fff; width: 90%; max-width: 1000px;
+           border-radius: 20px; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+           position: relative; font-family: inherit;">
+  </div>
+</div>
+
+<!-- AUTH ERROR -->
+<div id="auth-error"
+  style="position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
+         z-index: 9999; background: rgba(0, 0, 0, 0.55); backdrop-filter: blur(6px);">
+  <div style="background: #1c1c1c; padding: 22px 28px; border-radius: 18px;
+              box-shadow: 0 6px 28px rgba(0,0,0,0.55); width: 85%; max-width: 360px;
+              text-align: center; font-family: inherit;">
+    <div style="font-size: 16px; font-weight: 600; margin-bottom: 12px; color: #fff">Требуется авторизация</div>
+    <div style="font-size: 14px; color: #ccc; margin-bottom: 20px; line-height: 1.45">
+      Чтобы проголосовать, войдите через Telegram.
+    </div>
+    <button id="auth-error-close"
+      style="padding: 10px 22px; border-radius: 999px; border: none;
+             background: linear-gradient(135deg, #8b0000, #b30015);
+             color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;">
+      Понятно
+    </button>
+  </div>
+</div>
+
+<!-- SITE MESSAGE (with confirm) -->
+<div id="site-message"
+  style="position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
+         z-index: 10001; background: rgba(0, 0, 0, 0.55); backdrop-filter: blur(6px);">
+  <div style="background: #1c1c1c; padding: 22px 28px; border-radius: 18px;
+              box-shadow: 0 6px 28px rgba(0,0,0,0.55);
+              width: 85%; max-width: 420px; text-align: center; font-family: inherit;">
+    <div id="site-message-title" style="font-size: 16px; font-weight: 600; margin-bottom: 12px; color: #fff">Сообщение</div>
+    <div id="site-message-text" style="font-size: 14px; color: #ccc; margin-bottom: 18px; line-height: 1.45">...</div>
+    <div style="display:flex;gap:10px;justify-content:center;align-items:center;">
+      <button id="site-message-cancel"
+        style="padding: 10px 18px; border-radius: 999px; border: none; background: #2a2a2a; color: #fff;
+               font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; display:none;">
+        Отмена
+      </button>
+      <button id="site-message-close"
+        style="padding: 10px 22px; border-radius: 999px; border: none;
+               background: linear-gradient(135deg, #8b0000, #b30015);
+               color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; min-width: 120px;">
+        Понятно
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN PANEL (only ?admin=1) -->
+<div id="admin-panel"
+  style="position: fixed; right: 20px; bottom: 20px; width: 320px;
+         background: #161616; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,.6);
+         padding: 16px; z-index: 10050;
+         font-family: Inter, system-ui, -apple-system, Segoe UI, Arial, sans-serif; display: none;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+    <div style="font-size:15px;font-weight:700;">Admin panel</div>
+    <button id="admin-panel-close" style="border:none;background:transparent;color:#888;cursor:pointer;font-size:18px;line-height:1;padding:4px 8px;border-radius:10px;">×</button>
+  </div>
+
+  <div style="font-size:12px;color:#aaa;margin-bottom:10px;line-height:1.35;">
+    Панель видна только при <b>?admin=1</b>. Токен хранится в вашем браузере.
+  </div>
+
+  <input id="admin-token-input" type="password" placeholder="Admin token"
+    style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.08);
+           outline:none;background:#222;color:#fff;margin-bottom:10px;box-sizing:border-box;" />
+
+  <div style="display:flex;gap:8px;margin-bottom:14px;">
+    <button id="admin-save-token" style="flex:1;padding:10px;border-radius:10px;border:none;background:linear-gradient(135deg,#8b0000,#b30015);color:#fff;font-weight:600;cursor:pointer;">Сохранить</button>
+    <button id="admin-clear-token" style="padding:10px 12px;border-radius:10px;border:none;background:#2a2a2a;color:#ddd;cursor:pointer;white-space:nowrap;">Сброс</button>
+  </div>
+
+  <div style="font-size:13px;margin-bottom:6px;">Голосование: <b id="admin-voting-status">—</b></div>
+  <div style="font-size:13px;margin-bottom:12px;">Итоги: <b id="admin-results-status">—</b></div>
+
+  <button id="admin-toggle-voting" style="width:100%;padding:10px;border-radius:10px;border:none;background:#2a2a2a;color:#fff;cursor:pointer;margin-bottom:8px;">Переключить голосование</button>
+  <button id="admin-toggle-results" style="width:100%;padding:10px;border-radius:10px;border:none;background:#2a2a2a;color:#fff;cursor:pointer;">Переключить итоги</button>
+
+  <button id="admin-preview-results" style="width:100%;padding:10px;border-radius:10px;border:none;background:#2a2a2a;color:#fff;cursor:pointer;margin-top:8px;">Предпросмотр итогов (только админ)</button>
+
+  <div id="admin-panel-hint" style="margin-top:12px;font-size:12px;color:#888;line-height:1.35;">
+    Если видите <i>Unauthorized</i>, проверьте токен (Render → Environment → ADMIN_TOKEN).
+  </div>
 </div>
 
 <script>
-(function(){
-if(!location.search.includes("admin=1")) return;
-const p=document.getElementById("admin-panel");
-p.style.display="block";
-const msg=document.getElementById("msg");
-const tokenInput=document.getElementById("admintoken");
-tokenInput.value=localStorage.getItem("ADMIN_TOKEN")||"";
+(function () {
+  const API_BASE = "https://oscar-vote-backend.onrender.com";
 
-function api(path,body){
-  return fetch("https://oscar-vote-backend.onrender.com"+path,{
-    method:"POST",
-    headers:{
-      "Content-Type":"application/json",
-      "x-admin-token":localStorage.getItem("ADMIN_TOKEN")||"",
-      "Authorization":"Bearer "+(localStorage.getItem("ADMIN_TOKEN")||"")
-    },
-    body:JSON.stringify(body)
+  const CONFIRM_BTN_IMG =
+    "https://res.cloudinary.com/dliwy9wkt/image/upload/v1765215156/button1_ke9qdw.png";
+  const CANCEL_BTN_IMG =
+    "https://res.cloudinary.com/dliwy9wkt/image/upload/v1765215155/button2_ugg83a.png";
+  const LEFT_ARROW_IMG =
+    "https://res.cloudinary.com/dliwy9wkt/image/upload/v1765325532/left_k5poto.png";
+  const RIGHT_ARROW_IMG =
+    "https://res.cloudinary.com/dliwy9wkt/image/upload/v1765325532/right_cr1rhx.png";
+
+  const CLONE_COUNT = 3;
+  const BASE_CARD_WIDTH = 450;
+  let CARD_WIDTH = BASE_CARD_WIDTH;
+  const CARD_GAP = 110;
+  let CARD_FULL = CARD_WIDTH + CARD_GAP;
+  const CENTER_SHIFT = 54;
+  let SCALE = 1;
+
+  const INACTIVITY_DELAY = 4000;
+  let inactivityTimer = null;
+
+  // ===== message / confirm =====
+  let _siteConfirmOk = null;
+  function showSiteMessage(title, text) {
+    const wrap = document.getElementById("site-message");
+    const tEl = document.getElementById("site-message-title");
+    const xEl = document.getElementById("site-message-text");
+    const okBtn = document.getElementById("site-message-close");
+    const cancelBtn = document.getElementById("site-message-cancel");
+    if (!wrap || !tEl || !xEl || !okBtn || !cancelBtn) return;
+
+    _siteConfirmOk = null;
+    tEl.textContent = title || "Сообщение";
+    xEl.textContent = text || "";
+    okBtn.textContent = "Понятно";
+    cancelBtn.style.display = "none";
+    wrap.style.display = "flex";
+  }
+
+  function showSiteConfirm(title, text, okText, cancelText, onOk) {
+    const wrap = document.getElementById("site-message");
+    const tEl = document.getElementById("site-message-title");
+    const xEl = document.getElementById("site-message-text");
+    const okBtn = document.getElementById("site-message-close");
+    const cancelBtn = document.getElementById("site-message-cancel");
+    if (!wrap || !tEl || !xEl || !okBtn || !cancelBtn) return;
+
+    _siteConfirmOk = typeof onOk === "function" ? onOk : null;
+    tEl.textContent = title || "Подтверждение";
+    xEl.textContent = text || "";
+    okBtn.textContent = okText || "Ок";
+    cancelBtn.textContent = cancelText || "Отмена";
+    cancelBtn.style.display = "inline-block";
+    wrap.style.display = "flex";
+  }
+
+  function closeSiteMessage() {
+    const wrap = document.getElementById("site-message");
+    if (wrap) wrap.style.display = "none";
+    _siteConfirmOk = null;
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const msgClose = document.getElementById("site-message-close");
+    const msgCancel = document.getElementById("site-message-cancel");
+    const msgWrap = document.getElementById("site-message");
+
+    if (msgClose) msgClose.addEventListener("click", () => {
+      const cb = _siteConfirmOk;
+      closeSiteMessage();
+      if (cb) cb();
+    });
+    if (msgCancel) msgCancel.addEventListener("click", closeSiteMessage);
+    if (msgWrap) msgWrap.addEventListener("click", (e) => { if (e.target === msgWrap) closeSiteMessage(); });
+
+    const authClose = document.getElementById("auth-error-close");
+    if (authClose) authClose.addEventListener("click", () => {
+      const err = document.getElementById("auth-error");
+      if (err) err.style.display = "none";
+    });
+
+    const burger = document.getElementById("top-bar-burger");
+    const nav = document.getElementById("top-bar-nav");
+    if (burger && nav) burger.addEventListener("click", () => nav.classList.toggle("top-bar-nav--open"));
   });
-}
 
-document.getElementById("save").onclick=()=>{
-  localStorage.setItem("ADMIN_TOKEN",tokenInput.value.trim());
-  msg.textContent="Saved";
-};
+  // ===== helpers =====
+  function getTelegramUser() {
+    const raw = localStorage.getItem("tgUser");
+    if (!raw) return null;
+    try { return JSON.parse(raw); } catch { return null; }
+  }
+  function getOrCreateUserId() {
+    const tg = getTelegramUser();
+    if (tg && tg.id) return String(tg.id);
+    let id = localStorage.getItem("oscarUserId");
+    if (!id) {
+      id = String(Date.now()) + Math.floor(Math.random() * 1000000);
+      localStorage.setItem("oscarUserId", id);
+    }
+    return id;
+  }
 
-document.getElementById("toggle").onclick=async()=>{
-  msg.textContent="Saving…";
-  const r=await api("/admin/status",{key:"results_published",value:true,results_published:true});
-  msg.textContent=r.ok?"Updated":"Error";
-};
+  const userId = getOrCreateUserId();
+  const root = document.getElementById("nominations-root");
+  const loginStatusEl = document.getElementById("login-status");
+  const tgLoginWrap = document.getElementById("tg-login-wrap");
+  const modal = document.getElementById("nomination-modal");
+  const modalContent = document.getElementById("nomination-modal-content");
 
-document.getElementById("preview").onclick=()=>{
-  if(window.__ENABLE_ADMIN_PREVIEW__) window.__ENABLE_ADMIN_PREVIEW__();
-  msg.textContent="Preview enabled";
-};
+  let nominationsState = [];
+  let votesState = {};
+  let currentNominationIndex = 0;
+  let virtualIndex = 0;
+  let isAnimatingCarousel = false;
+  let currentOffsetX = 0;
+  let dragStartOffsetX = 0;
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let touchCurrentX = 0;
+  let isDragging = false;
+  let isHorizontalDrag = false;
+  let swipeAttached = false;
+  let swipeStartVirtualIndex = 0;
+
+  // site status / results
+  let siteStatus = { votingOpen: true, resultsPublished: false };
+  let resultsMap = {}; // nominationId -> {winnerNomineeId, winnerName, winnerImageUrl}
+  let adminPreviewResults = false;
+
+  function updateLoginStatus() {
+    const tg = getTelegramUser();
+    if (tg) {
+      loginStatusEl.innerHTML = "";
+      loginStatusEl.style.color = "#fff";
+      if (tgLoginWrap) tgLoginWrap.style.display = "none";
+    } else {
+      loginStatusEl.innerHTML = "";
+      loginStatusEl.style.color = "#aaa";
+      if (tgLoginWrap) tgLoginWrap.style.display = "inline-block";
+    }
+  }
+
+  function showAuthError() {
+    const err = document.getElementById("auth-error");
+    if (err) err.style.display = "flex";
+  }
+
+  function recalcCardLayout() {
+    const vw = window.innerWidth || 900;
+    const isMobile = vw <= 600;
+    if (isMobile) {
+      const newWidth = Math.max(220, Math.min(260, Math.round(vw * 0.75)));
+      CARD_WIDTH = newWidth;
+    } else {
+      CARD_WIDTH = BASE_CARD_WIDTH;
+    }
+    CARD_FULL = CARD_WIDTH + CARD_GAP;
+    SCALE = CARD_WIDTH / BASE_CARD_WIDTH;
+  }
+
+  function updateBoxSizes() {
+    let boxWidth = Math.round(CARD_WIDTH * 1.2);
+    document.querySelectorAll(".side-box").forEach((img) => { img.style.maxWidth = boxWidth + "px"; });
+  }
+
+  function updateImageScales() {
+    updateBoxSizes();
+    const baseArrow = 40;
+    const arrowSize = Math.round(baseArrow * SCALE);
+    document.querySelectorAll(".vote-nav-arrow img").forEach((img) => {
+      img.style.width = arrowSize + "px";
+      img.style.height = arrowSize + "px";
+    });
+
+    const baseNominee = 180;
+    const nomineeSize = Math.round(baseNominee * SCALE);
+    document.querySelectorAll(".modal-nominee-img").forEach((wrap) => {
+      wrap.style.width = nomineeSize + "px";
+      wrap.style.height = nomineeSize + "px";
+    });
+
+    const baseBtnW = 240;
+    const baseBtnH = 70;
+    const btnW = Math.round(baseBtnW * SCALE);
+    const btnH = Math.round(baseBtnH * SCALE);
+    document.querySelectorAll(".vote-btn").forEach((btn) => {
+      btn.style.width = btnW + "px";
+      btn.style.height = btnH + "px";
+    });
+  }
+
+  function getCoverUrl(nomination) {
+    return nomination.imageUrl || null;
+  }
+
+  function getNominationVisual(nomination, sizePx) {
+    const boxSize = sizePx || 40;
+    const coverUrl = getCoverUrl(nomination);
+    if (!coverUrl) return "";
+    return `
+      <div style="width:${boxSize}px;height:${boxSize}px;border-radius:12px;overflow:hidden;background:#222;flex-shrink:0;">
+        <img src="${coverUrl}" style="width:100%;height:100%;object-fit:cover;">
+      </div>
+    `;
+  }
+
+  // ===== API =====
+  async function fetchNominations() {
+    const r = await fetch(API_BASE + "/nominations");
+    const d = await r.json();
+    return d.nominations || [];
+  }
+
+  async function fetchMyVotes() {
+    const r = await fetch(API_BASE + "/my-votes?userId=" + encodeURIComponent(userId));
+    const d = await r.json();
+    return d.votes || {};
+  }
+
+  async function sendVote(nominationId, nomineeId) {
+    const r = await fetch(API_BASE + "/vote", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, nominationId, nomineeId }),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.success) throw new Error(d.error || "Ошибка");
+  }
+
+  async function sendUnvote(nominationId) {
+    const r = await fetch(API_BASE + "/unvote", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, nominationId }),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.success) throw new Error(d.error || "Ошибка");
+  }
+
+  // optional endpoints (fail-safe)
+  async function fetchSiteStatus() {
+    try {
+      const r = await fetch(API_BASE + "/site-status");
+      const d = await r.json();
+      // expected: { votingOpen: bool, resultsPublished: bool }
+      if (typeof d.votingOpen === "boolean") siteStatus.votingOpen = d.votingOpen;
+      if (typeof d.resultsPublished === "boolean") siteStatus.resultsPublished = d.resultsPublished;
+      return siteStatus;
+    } catch (e) {
+      return siteStatus;
+    }
+  }
+
+  async function fetchResultsForView() {
+    // results visible if published OR admin preview enabled
+    const shouldShow = !!siteStatus.resultsPublished || !!adminPreviewResults;
+    if (!shouldShow) return {};
+    try {
+      const r = await fetch(API_BASE + "/results");
+      const d = await r.json();
+      return d.results || d || {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  // ===== modal logic =====
+  function closeModal() {
+    modalContent.style.animation = "modalOut 0.15s ease-out";
+    setTimeout(() => {
+      modal.style.display = "none";
+      modalContent.innerHTML = "";
+      modalContent.style.animation = "";
+      const bar = document.getElementById("top-bar");
+      if (bar) {
+        bar.classList.remove("top-bar-hidden");
+        updateTopBarOnScroll();
+        resetTopBarTimer();
+      }
+    }, 150);
+  }
+
+  function buildNomineeButton(nomination, nominee, winnerId) {
+    const isWinner = winnerId != null && Number(nominee.id) === Number(winnerId);
+    const badge = isWinner
+      ? `<div style="margin-top:8px;font-size:12px;color:#ffd36b;">Победитель</div>`
+      : ``;
+
+    return `
+      <button class="modal-nominee-btn" data-nomination-id="${nomination.id}" data-nominee-id="${nominee.id}">
+        <div class="modal-nominee-img"><img src="${nominee.imageUrl}" alt=""></div>
+        <div style="text-align:center;">
+          <div class="modal-nominee-name">${nominee.name}</div>
+          <div class="nominee-status"></div>
+          ${badge}
+        </div>
+      </button>
+    `;
+  }
+
+  function openResultsModal(id) {
+    const nomination = nominationsState.find((n) => Number(n.id) === Number(id));
+    if (!nomination) return;
+
+    const iconHtml = getNominationVisual(nomination, 46);
+    const res = resultsMap[String(nomination.id)] || resultsMap[nomination.id] || null;
+    const winnerNomineeId = res && (res.winnerNomineeId || res.winner_nominee_id || res.nominee_id) ? (res.winnerNomineeId || res.winner_nominee_id || res.nominee_id) : null;
+
+    const nomineesHtml = nomination.nominees.map((c) => buildNomineeButton(nomination, c, winnerNomineeId)).join("");
+
+    modalContent.innerHTML = `
+      <button id="modal-close-btn"
+        style="position:absolute;top:12px;right:16px;border:none;background:none;
+               font-size:26px;color:#777;cursor:pointer;">×</button>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;">
+        <div style="flex-shrink:0;">${iconHtml}</div>
+        <h2 style="margin:0;font-size:24px;">${nomination.title}</h2>
+      </div>
+      <p style="margin:0 0 16px;font-size:14px;color:#ccc;">
+        Итоги по номинации.
+      </p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;margin-bottom:8px;">
+        ${nomineesHtml}
+      </div>
+    `;
+
+    modal.style.display = "flex";
+    const bar = document.getElementById("top-bar");
+    if (bar) bar.classList.add("top-bar-hidden");
+
+    const closeBtn = modalContent.querySelector("#modal-close-btn");
+    if (closeBtn) closeBtn.addEventListener("click", closeModal);
+
+    // make all nominee buttons non-interactive in results view
+    Array.from(modalContent.querySelectorAll(".modal-nominee-btn")).forEach((btn) => {
+      btn.style.pointerEvents = "none";
+      const nId = Number(btn.dataset.nomineeId);
+      if (winnerNomineeId != null && nId === Number(winnerNomineeId)) btn.classList.add("active");
+      const st = btn.querySelector(".nominee-status");
+      if (st) st.textContent = (winnerNomineeId != null && nId === Number(winnerNomineeId)) ? "Победитель" : "";
+      btn.style.opacity = (winnerNomineeId != null && nId === Number(winnerNomineeId)) ? "1" : "0.75";
+    });
+
+    updateImageScales();
+  }
+
+  function openVoteModal(id) {
+    const nomination = nominationsState.find((n) => Number(n.id) === Number(id));
+    if (!nomination) return;
+
+    const iconHtml = getNominationVisual(nomination, 46);
+    const currentVoteId = votesState[nomination.id] ?? null;
+    const nomineesHtml = nomination.nominees.map((c) => `
+      <button class="modal-nominee-btn" data-nomination-id="${nomination.id}" data-nominee-id="${c.id}">
+        <div class="modal-nominee-img"><img src="${c.imageUrl}" alt=""></div>
+        <div style="text-align:center;">
+          <div class="modal-nominee-name">${c.name}</div>
+          <div class="nominee-status"></div>
+        </div>
+      </button>
+    `).join("");
+
+    modalContent.innerHTML = `
+      <button id="modal-close-btn"
+        style="position:absolute;top:12px;right:16px;border:none;background:none;
+               font-size:26px;color:#777;cursor:pointer;">×</button>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;">
+        <div style="flex-shrink:0;">${iconHtml}</div>
+        <h2 style="margin:0;font-size:24px;">${nomination.title}</h2>
+      </div>
+      ${nomination.description ? `<p style="margin:0 0 20px;font-size:14px;color:#ccc;">${nomination.description}</p>` : ""}
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;margin-bottom:24px;">
+        ${nomineesHtml}
+      </div>
+      <div style="display:flex;justify-content:flex-end;align-items:center;margin-top:8px;">
+        <button id="vote-action-btn" class="vote-btn disabled" style="background-image:url('${CONFIRM_BTN_IMG}');">
+          Отправить голос
+        </button>
+      </div>
+    `;
+
+    modal.style.display = "flex";
+    const bar = document.getElementById("top-bar");
+    if (bar) bar.classList.add("top-bar-hidden");
+
+    const closeBtn = modalContent.querySelector("#modal-close-btn");
+    if (closeBtn) closeBtn.addEventListener("click", closeModal);
+
+    const nomineeButtons = Array.from(modalContent.querySelectorAll(".modal-nominee-btn"));
+    const voteBtn = modalContent.querySelector("#vote-action-btn");
+
+    let modalConfirmed = currentVoteId !== null;
+    let currentTempNomineeId = modalConfirmed ? currentVoteId : null;
+    let saving = false;
+
+    function updateModalState() {
+      const voteId = votesState[nomination.id] ?? null;
+      nomineeButtons.forEach((btn) => {
+        const nId = Number(btn.dataset.nomineeId);
+        const statusEl = btn.querySelector(".nominee-status");
+        const isConfirmed = modalConfirmed && voteId === nId;
+        const isSelected = !modalConfirmed && currentTempNomineeId === nId;
+        const active = isConfirmed || isSelected;
+
+        btn.classList.toggle("active", active);
+        btn.style.pointerEvents = modalConfirmed ? "none" : "auto";
+        btn.style.opacity = modalConfirmed ? (isConfirmed ? "1" : "0.7") : "1";
+
+        if (statusEl) {
+          if (isConfirmed) statusEl.textContent = "Ваш голос";
+          else if (isSelected) statusEl.textContent = "Вы выбрали";
+          else statusEl.textContent = "";
+        }
+      });
+
+      if (!voteBtn) return;
+
+      if (!siteStatus.votingOpen) {
+        voteBtn.classList.add("disabled");
+        voteBtn.style.filter = "grayscale(1) brightness(0.7)";
+        voteBtn.style.pointerEvents = "none";
+        voteBtn.textContent = "Голосование завершено";
+        voteBtn.style.backgroundImage = `url('${CONFIRM_BTN_IMG}')`;
+        return;
+      }
+
+      if (modalConfirmed) {
+        voteBtn.classList.remove("disabled");
+        voteBtn.style.backgroundImage = `url('${CANCEL_BTN_IMG}')`;
+        voteBtn.textContent = "Отменить голос";
+        voteBtn.style.pointerEvents = saving ? "none" : "auto";
+        voteBtn.style.filter = saving ? "grayscale(1) brightness(0.7)" : "none";
+      } else {
+        voteBtn.style.backgroundImage = `url('${CONFIRM_BTN_IMG}')`;
+        voteBtn.textContent = "Отправить голос";
+        const canConfirm = !!currentTempNomineeId && !saving;
+        voteBtn.classList.toggle("disabled", !canConfirm);
+        voteBtn.style.pointerEvents = canConfirm ? "auto" : "none";
+        voteBtn.style.filter = canConfirm ? "none" : "grayscale(1) brightness(0.7)";
+      }
+    }
+
+    nomineeButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        if (modalConfirmed || saving) return;
+        if (!siteStatus.votingOpen) return;
+        currentTempNomineeId = Number(btn.dataset.nomineeId);
+        updateModalState();
+      });
+    });
+
+    if (voteBtn) {
+      voteBtn.addEventListener("click", async () => {
+        if (saving) return;
+        if (!siteStatus.votingOpen) return;
+
+        if (!getTelegramUser()) { showAuthError(); return; }
+
+        if (!modalConfirmed) {
+          if (!currentTempNomineeId) return;
+          try {
+            saving = true; updateModalState();
+            await sendVote(nomination.id, currentTempNomineeId);
+            votesState[nomination.id] = currentTempNomineeId;
+            modalConfirmed = true;
+          } catch (e) {
+            const msg = (e && e.message) ? e.message : "";
+            if (msg.toLowerCase().includes("голосование завершено")) {
+              showSiteMessage("Голосование завершено", "Вы больше не можете менять голоса. Итоги будут опубликованы позже.");
+              siteStatus.votingOpen = false;
+            } else {
+              showSiteMessage("Ошибка", msg || "Ошибка при сохранении голоса");
+            }
+          } finally {
+            saving = false; updateCardStyles(); updateModalState();
+          }
+        } else {
+          try {
+            saving = true; updateModalState();
+            await sendUnvote(nomination.id);
+            votesState[nomination.id] = null;
+            modalConfirmed = false;
+            currentTempNomineeId = null;
+          } catch (e) {
+            const msg = (e && e.message) ? e.message : "";
+            if (msg.toLowerCase().includes("голосование завершено")) {
+              showSiteMessage("Голосование завершено", "Вы больше не можете менять голоса. Итоги будут опубликованы позже.");
+              siteStatus.votingOpen = false;
+            } else {
+              showSiteMessage("Ошибка", msg || "Ошибка при отмене голоса");
+            }
+          } finally {
+            saving = false; updateCardStyles(); updateModalState();
+          }
+        }
+      });
+    }
+
+    updateModalState();
+    updateImageScales();
+  }
+
+  function openModalByMode(id) {
+    const showResults = !!siteStatus.resultsPublished || !!adminPreviewResults;
+    if (showResults) openResultsModal(id);
+    else openVoteModal(id);
+  }
+
+  // ===== carousel =====
+  function virtualToRealIndex(vIdx) {
+    const realLen = nominationsState.length;
+    if (!realLen) return 0;
+    if (realLen === 1) return 0;
+    const K = CLONE_COUNT;
+    let idx = (vIdx - K) % realLen;
+    if (idx < 0) idx += realLen;
+    return idx;
+  }
+
+  function updateTrackPosition(animate = true, vIndexOverride = null) {
+    const viewport = document.getElementById("carousel-viewport");
+    const track = document.getElementById("carousel-track");
+    if (!viewport || !track) return;
+    const vIdx = vIndexOverride != null ? vIndexOverride : virtualIndex;
+    const vpWidth = viewport.getBoundingClientRect().width || 0;
+    const centerX = (vIdx + 0.5) * CARD_FULL;
+    const offsetPx = vpWidth / 2 - centerX + CENTER_SHIFT;
+    currentOffsetX = offsetPx;
+    track.style.transition = animate ? "transform 0.35s cubic-bezier(0.22, 0.61, 0.36, 1)" : "none";
+    track.style.transform = `translateX(${offsetPx}px)`;
+  }
+
+  function updateCardStyles() {
+    const track = document.getElementById("carousel-track");
+    if (!track) return;
+
+    const realLen = nominationsState.length;
+    const cards = track.querySelectorAll(".nomination-card");
+    const outers = track.querySelectorAll(".nomination-card-outer");
+
+    cards.forEach((card) => {
+      const realIdx = Number(card.dataset.realIndex || 0);
+      const nomination = nominationsState[realIdx];
+      const isCenter = realIdx === currentNominationIndex;
+
+      card.classList.toggle("nomination-card--center", isCenter);
+      card.classList.toggle("nomination-card--side", !isCenter);
+
+      const coverUrl = nomination && getCoverUrl(nomination);
+      const hasImage = !!coverUrl;
+      card.classList.toggle("nomination-card--with-image", hasImage);
+      card.classList.toggle("nomination-card--plain", !hasImage);
+    });
+
+    outers.forEach((outer) => {
+      const realIdx = Number(outer.dataset.realIndex || 0);
+      const isCenter = realIdx === currentNominationIndex;
+      outer.classList.toggle("nomination-card-outer--center", isCenter);
+      outer.classList.toggle("nomination-card-outer--side", !isCenter);
+    });
+
+    const indicator = document.getElementById("carousel-indicator");
+    if (indicator && realLen) {
+      const ciCurrent = indicator.querySelector("#ci-current");
+      const ciTotal = indicator.querySelector("#ci-total");
+      if (ciCurrent && ciTotal) {
+        const cur = currentNominationIndex + 1;
+        ciCurrent.textContent = cur < 10 ? "0" + cur : String(cur);
+        ciTotal.textContent = realLen < 10 ? "0" + realLen : String(realLen);
+      }
+    }
+  }
+
+  function moveCarousel(delta) {
+    if (isAnimatingCarousel) return;
+    const realLen = nominationsState.length;
+    if (!realLen) return;
+    const track = document.getElementById("carousel-track");
+    if (!track) return;
+    const virtualLen = track.children.length;
+    if (!virtualLen) return;
+
+    let targetVirtualIndex = virtualIndex + delta;
+    if (targetVirtualIndex < 0) targetVirtualIndex = 0;
+    if (targetVirtualIndex > virtualLen - 1) targetVirtualIndex = virtualLen - 1;
+    if (targetVirtualIndex === virtualIndex) return;
+
+    isAnimatingCarousel = true;
+    virtualIndex = targetVirtualIndex;
+    currentNominationIndex = virtualToRealIndex(virtualIndex);
+    updateCardStyles();
+    updateTrackPosition(true, virtualIndex);
+
+    if (realLen > 1) {
+      const K = CLONE_COUNT;
+      const minCenter = K;
+      const maxCenter = K + realLen;
+      setTimeout(() => {
+        if (virtualIndex < minCenter) {
+          virtualIndex += realLen;
+          updateTrackPosition(false, virtualIndex);
+        } else if (virtualIndex >= maxCenter) {
+          virtualIndex -= realLen;
+          updateTrackPosition(false, virtualIndex);
+        }
+        isAnimatingCarousel = false;
+      }, 260);
+    } else {
+      setTimeout(() => { isAnimatingCarousel = false; }, 260);
+    }
+  }
+
+  function attachSwipeListeners() {
+    if (swipeAttached) return;
+    const viewport = document.getElementById("carousel-viewport");
+    const track = document.getElementById("carousel-track");
+    if (!viewport || !track) return;
+    swipeAttached = true;
+
+    function getOffsetsBounds() {
+      const vpWidth = viewport.getBoundingClientRect().width || 0;
+      const virtualLen = track.children.length || 0;
+      if (!virtualLen) return { minOffset: 0, maxOffset: 0 };
+      const firstCenterX = 0.5 * CARD_FULL;
+      const lastCenterX = (virtualLen - 0.5) * CARD_FULL;
+      const maxOffset = vpWidth / 2 - firstCenterX;
+      const minOffset = vpWidth / 2 - lastCenterX;
+      const overscroll = 60;
+      return { minOffset: minOffset - overscroll, maxOffset: maxOffset + overscroll };
+    }
+
+    function snapToClosestCard() {
+      const virtualLen = track.children.length || 0;
+      const realLen = nominationsState.length || 0;
+      if (!virtualLen || !realLen) { updateTrackPosition(true); return; }
+      const vpWidth = viewport.getBoundingClientRect().width || 0;
+      if (!vpWidth) { updateTrackPosition(true); return; }
+
+      const dx = touchCurrentX - touchStartX;
+      const SWIPE_THRESHOLD = 20;
+      const centerWorldX = vpWidth / 2 - currentOffsetX;
+      let vIdx = Math.round(centerWorldX / CARD_FULL - 0.5);
+      vIdx = Math.max(0, Math.min(virtualLen - 1, vIdx));
+
+      if (Math.abs(dx) > SWIPE_THRESHOLD && realLen > 1) {
+        if (vIdx === swipeStartVirtualIndex) {
+          const dir = dx < 0 ? 1 : -1;
+          vIdx = Math.max(0, Math.min(virtualLen - 1, swipeStartVirtualIndex + dir));
+        }
+      }
+
+      virtualIndex = vIdx;
+      currentNominationIndex = virtualToRealIndex(virtualIndex);
+      updateCardStyles();
+      updateTrackPosition(true);
+
+      if (realLen > 1) {
+        const K = CLONE_COUNT;
+        const minCenter = K;
+        const maxCenter = K + realLen;
+        setTimeout(() => {
+          if (virtualIndex < minCenter) {
+            virtualIndex += realLen;
+            updateTrackPosition(false, virtualIndex);
+          } else if (virtualIndex >= maxCenter) {
+            virtualIndex -= realLen;
+            updateTrackPosition(false, virtualIndex);
+          }
+        }, 260);
+      }
+    }
+
+    viewport.addEventListener("touchstart", (e) => {
+      if (!e.touches || !e.touches.length) return;
+      isDragging = true;
+      isHorizontalDrag = false;
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+      touchCurrentX = touchStartX;
+      dragStartOffsetX = currentOffsetX;
+      swipeStartVirtualIndex = virtualIndex;
+      track.style.transition = "none";
+    }, { passive: false });
+
+    viewport.addEventListener("touchmove", (e) => {
+      if (!isDragging) return;
+      if (!e.touches || !e.touches.length) return;
+      const touch = e.touches[0];
+      const dx = touch.clientX - touchStartX;
+      const dy = touch.clientY - touchStartY;
+
+      if (!isHorizontalDrag) {
+        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+        if (Math.abs(dy) > Math.abs(dx)) {
+          isDragging = false;
+          updateTrackPosition(true);
+          return;
+        }
+        isHorizontalDrag = true;
+      }
+
+      e.preventDefault();
+      touchCurrentX = touch.clientX;
+      const delta = touchCurrentX - touchStartX;
+      const { minOffset, maxOffset } = getOffsetsBounds();
+      let newOffset = dragStartOffsetX + delta * 0.8;
+      newOffset = Math.max(minOffset, Math.min(maxOffset, newOffset));
+      currentOffsetX = newOffset;
+      track.style.transform = `translateX(${newOffset}px)`;
+    }, { passive: false });
+
+    viewport.addEventListener("touchend", () => {
+      if (!isDragging) return;
+      isDragging = false;
+      if (!isHorizontalDrag) { updateTrackPosition(true); return; }
+      snapToClosestCard();
+    }, { passive: false });
+
+    function onMouseMove(e) {
+      if (!isDragging) return;
+      touchCurrentX = e.clientX;
+      const delta = e.clientX - touchStartX;
+      const { minOffset, maxOffset } = getOffsetsBounds();
+      let newOffset = dragStartOffsetX + delta * 0.8;
+      newOffset = Math.max(minOffset, Math.min(maxOffset, newOffset));
+      currentOffsetX = newOffset;
+      track.style.transform = `translateX(${newOffset}px)`;
+    }
+
+    function onMouseUp() {
+      if (!isDragging) return;
+      isDragging = false;
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+      snapToClosestCard();
+    }
+
+    viewport.addEventListener("mousedown", (e) => {
+      if (e.button !== 0) return;
+      isDragging = true;
+      isHorizontalDrag = true;
+      touchStartX = e.clientX;
+      touchCurrentX = e.clientX;
+      dragStartOffsetX = currentOffsetX;
+      swipeStartVirtualIndex = virtualIndex;
+      track.style.transition = "none";
+      document.addEventListener("mousemove", onMouseMove);
+      document.addEventListener("mouseup", onMouseUp);
+    });
+  }
+
+  function render() {
+    const realLen = nominationsState.length;
+    if (!realLen) {
+      root.innerHTML = "<div>Пока нет ни одной номинации.</div>";
+      return;
+    }
+
+    recalcCardLayout();
+
+    let renderNominations = [];
+    if (realLen > 1) {
+      const K = CLONE_COUNT;
+      const tmp = [];
+      for (let i = K; i > 0; i--) tmp.push(nominationsState[(realLen - i + realLen) % realLen]);
+      for (let i = 0; i < realLen; i++) tmp.push(nominationsState[i]);
+      for (let i = 0; i < K; i++) tmp.push(nominationsState[i]);
+      renderNominations = tmp;
+    } else {
+      renderNominations = [...nominationsState];
+    }
+
+    const cardsHtml = renderNominations.map((nom, vIdx) => {
+      const realIdx = virtualToRealIndex(vIdx);
+      const isCenter = realIdx === currentNominationIndex;
+      const coverUrl = getCoverUrl(nom);
+      const hasImage = !!coverUrl;
+
+      return `
+        <div class="nomination-card-outer ${isCenter ? "nomination-card-outer--center" : "nomination-card-outer--side"}"
+             data-real-index="${realIdx}" data-virtual-index="${vIdx}"
+             style="width:${CARD_WIDTH}px;flex:0 0 ${CARD_WIDTH}px;">
+          <div class="nomination-card ${hasImage ? "nomination-card--with-image" : "nomination-card--plain"} ${isCenter ? "nomination-card--center" : "nomination-card--side"}"
+               data-real-index="${realIdx}" data-virtual-index="${vIdx}">
+            <div class="nomination-card-inner uc-tilt">
+              ${hasImage ? `<img src="${coverUrl}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:1;">` : ``}
+            </div>
+          </div>
+          <div class="nomination-card-title-wrap">
+            <div class="nomination-card-title">${nominationsState[realIdx].title}</div>
+            <button class="vote-card-btn" data-nomination-id="${nominationsState[realIdx].id}">
+              ${((siteStatus.resultsPublished || adminPreviewResults) ? "Смотреть итоги" : "Проголосовать")}
+            </button>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    root.innerHTML = `
+      <div style="width:100%; padding:70px 0 18px; position:relative; display:flex; justify-content:center; overflow:visible;">
+        <img class="side-box side-box-left side-box-bottom" src="https://res.cloudinary.com/dliwy9wkt/image/upload/v1765398470/card_box_left_low_scyc3g.png" alt="" />
+        <img class="side-box side-box-left side-box-top" src="https://res.cloudinary.com/dliwy9wkt/image/upload/v1765398951/card_box_left_high_wwnhma.png" alt="" />
+        <img class="side-box side-box-right side-box-bottom" src="https://res.cloudinary.com/dliwy9wkt/image/upload/v1765398471/card_box_right_low_anra1j.png" alt="" />
+        <img class="side-box side-box-right side-box-top" src="https://res.cloudinary.com/dliwy9wkt/image/upload/v1765398472/card_box_right_high_ibfak7.png" alt="" />
+        <div id="carousel-viewport" style="overflow:hidden;flex:0 1 auto;max-width:100%;">
+          <div id="carousel-track" style="display:flex;align-items:center;gap:${CARD_GAP}px;">
+            ${cardsHtml}
+          </div>
+        </div>
+      </div>
+      <div class="bottom-nav-row">
+        <button class="vote-nav-arrow" data-dir="-1"><img src="${LEFT_ARROW_IMG}" alt="Назад"></button>
+        <div id="carousel-indicator" style="text-align:center;font-size:14px;color:#ddd;display:flex;align-items:center;gap:6px;">
+          <span id="ci-current" style="font-weight:700;font-size:15px;color:#fff;"></span>
+          <span style="opacity:0.6;">/</span>
+          <span id="ci-total" style="font-size:14px;color:#ddd;"></span>
+        </div>
+        <button class="vote-nav-arrow" data-dir="1"><img src="${RIGHT_ARROW_IMG}" alt="Вперёд"></button>
+      </div>
+    `;
+
+    updateImageScales();
+
+    root.querySelectorAll(".vote-nav-arrow").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const dir = Number(btn.dataset.dir);
+        if (!isNaN(dir)) moveCarousel(dir);
+      });
+    });
+
+    root.querySelectorAll(".vote-card-btn").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.nominationId;
+        if (!id) return;
+        openModalByMode(id);
+      });
+    });
+
+    attachSwipeListeners();
+    updateCardStyles();
+    updateTrackPosition(false, virtualIndex);
+
+    if (window.tilt && typeof window.tilt.init === "function") {
+      window.tilt.init(".uc-tilt", { rotate: 5, speed: 300, perspective: 1000, glare: false, maxglare: 0 });
+    }
+  }
+
+  // ===== top bar behavior =====
+  function updateTopBarOnScroll() {
+    const bar = document.getElementById("top-bar");
+    if (!bar) return;
+    if (modal && modal.style.display === "flex") return;
+    if (window.scrollY > 10) bar.classList.add("top-bar-scrolled");
+    else { bar.classList.remove("top-bar-scrolled"); bar.classList.remove("top-bar-hidden"); }
+  }
+
+  function resetTopBarTimer() {
+    const bar = document.getElementById("top-bar");
+    if (!bar) return;
+    if (modal && modal.style.display === "flex") return;
+    bar.classList.remove("top-bar-hidden");
+
+    if (window.scrollY <= 0) { if (inactivityTimer) clearTimeout(inactivityTimer); return; }
+    if (inactivityTimer) clearTimeout(inactivityTimer);
+    inactivityTimer = setTimeout(() => { if (window.scrollY > 0) bar.classList.add("top-bar-hidden"); }, INACTIVITY_DELAY);
+  }
+
+  // ===== admin panel logic (confirm + preview) =====
+  (function initAdminPanel() {
+    if (!location.search.includes("admin=1")) return;
+    const panel = document.getElementById("admin-panel");
+    if (!panel) return;
+    panel.style.display = "block";
+
+    const tokenInput = document.getElementById("admin-token-input");
+    const saveBtn = document.getElementById("admin-save-token");
+    const clearBtn = document.getElementById("admin-clear-token");
+    const closeBtn = document.getElementById("admin-panel-close");
+
+    const votingStatusEl = document.getElementById("admin-voting-status");
+    const resultsStatusEl = document.getElementById("admin-results-status");
+    const toggleVotingBtn = document.getElementById("admin-toggle-voting");
+    const toggleResultsBtn = document.getElementById("admin-toggle-results");
+    const previewBtn = document.getElementById("admin-preview-results");
+    const hintEl = document.getElementById("admin-panel-hint");
+
+    let status = null;
+    const storedToken = localStorage.getItem("ADMIN_TOKEN");
+    if (storedToken) tokenInput.value = storedToken;
+
+    function setHint(text) { if (hintEl) hintEl.textContent = text || ""; }
+
+    function apiAdmin(path, options = {}) {
+      const token = localStorage.getItem("ADMIN_TOKEN") || "";
+      return fetch(API_BASE + path, {
+        ...options,
+        headers: { "Content-Type": "application/json", "x-admin-token": token, ...(options.headers || {}) }
+      });
+    }
+
+    function renderAdminStatus() {
+      if (!status) return;
+      votingStatusEl.textContent = status.voting_open ? "ОТКРЫТО" : "ЗАКРЫТО";
+      votingStatusEl.style.color = status.voting_open ? "#6bd96b" : "#ff6b6b";
+
+      resultsStatusEl.textContent = status.results_published ? "ОПУБЛИКОВАНЫ" : "СКРЫТЫ";
+      resultsStatusEl.style.color = status.results_published ? "#ffd36b" : "#aaa";
+    }
+
+    function renderPreviewBtn() {
+      if (!previewBtn) return;
+      previewBtn.textContent = adminPreviewResults
+        ? "Выключить предпросмотр итогов"
+        : "Предпросмотр итогов (только админ)";
+    }
+
+    async function loadAdminStatus() {
+      try {
+        setHint("Загрузка статусов…");
+        const r = await apiAdmin("/admin/status");
+        if (!r.ok) {
+          const d = await r.json().catch(() => ({}));
+          if (r.status === 401) setHint("Unauthorized — вставьте ADMIN_TOKEN и нажмите «Сохранить».");
+          else setHint((d && d.error) ? d.error : "Ошибка загрузки статусов");
+          return;
+        }
+        status = await r.json();
+        renderAdminStatus();
+        setHint("Готово.");
+      } catch (e) {
+        console.error(e);
+        setHint("Ошибка сети/доступа к backend.");
+      }
+    }
+
+    async function updateAdminStatus(key, value) {
+      try {
+        setHint("Сохранение…");
+        const r = await apiAdmin("/admin/status", { method: "POST", body: JSON.stringify({ key, value }) });
+        if (!r.ok) {
+          const d = await r.json().catch(() => ({}));
+          if (r.status === 401) setHint("Unauthorized — проверьте токен.");
+          else setHint((d && d.error) ? d.error : "Ошибка сохранения");
+          return;
+        }
+        await loadAdminStatus();
+        // after status change refresh public status and rerender
+        await fetchSiteStatus();
+        resultsMap = await fetchResultsForView();
+        render();
+      } catch (e) {
+        console.error(e);
+        setHint("Ошибка сети/сохранения.");
+      }
+    }
+
+    if (saveBtn) saveBtn.addEventListener("click", () => {
+      localStorage.setItem("ADMIN_TOKEN", (tokenInput.value || "").trim());
+      loadAdminStatus();
+    });
+
+    if (clearBtn) clearBtn.addEventListener("click", () => {
+      localStorage.removeItem("ADMIN_TOKEN");
+      tokenInput.value = "";
+      status = null;
+      votingStatusEl.textContent = "—";
+      resultsStatusEl.textContent = "—";
+      votingStatusEl.style.color = "#aaa";
+      resultsStatusEl.style.color = "#aaa";
+      setHint("Токен сброшен. Вставьте новый токен и нажмите «Сохранить».");
+    });
+
+    if (closeBtn) closeBtn.addEventListener("click", () => { panel.style.display = "none"; });
+
+    if (toggleVotingBtn) toggleVotingBtn.addEventListener("click", () => {
+      if (!status) return;
+      const next = !status.voting_open;
+      showSiteConfirm(
+        next ? "Открыть голосование?" : "Закрыть голосование?",
+        next ? "Пользователи снова смогут менять голоса." : "Пользователи больше не смогут менять голоса. Ты уверен?",
+        next ? "Открыть" : "Закрыть",
+        "Отмена",
+        () => updateAdminStatus("voting_open", next)
+      );
+    });
+
+    if (toggleResultsBtn) toggleResultsBtn.addEventListener("click", () => {
+      if (!status) return;
+      const next = !status.results_published;
+      showSiteConfirm(
+        next ? "Опубликовать итоги?" : "Скрыть итоги?",
+        next ? "Победители станут видны всем на сайте." : "Победители перестанут быть видны пользователям. Ты уверен?",
+        next ? "Опубликовать" : "Скрыть",
+        "Отмена",
+        () => updateAdminStatus("results_published", next)
+      );
+    });
+
+    if (previewBtn) {
+      renderPreviewBtn();
+      previewBtn.addEventListener("click", async () => {
+        adminPreviewResults = !adminPreviewResults;
+        renderPreviewBtn();
+        resultsMap = await fetchResultsForView();
+        render();
+        showSiteMessage("Предпросмотр итогов", adminPreviewResults
+          ? "Предпросмотр включён. Ты видишь победителей, пользователи — нет."
+          : "Предпросмотр выключен."
+        );
+      });
+    }
+
+    loadAdminStatus();
+  })();
+
+  // ===== init =====
+  async function init() {
+    try {
+      updateLoginStatus();
+      root.innerHTML = "Загружаем…";
+
+      await fetchSiteStatus();
+      resultsMap = await fetchResultsForView();
+
+      const [nominations, votes] = await Promise.all([fetchNominations(), fetchMyVotes()]);
+      nominationsState = nominations;
+      votesState = votes;
+
+      if (!nominationsState.length) {
+        root.innerHTML = "<div>Пока нет ни одной номинации.</div>";
+        return;
+      }
+
+      currentNominationIndex = 0;
+      virtualIndex = nominationsState.length > 1 ? CLONE_COUNT : 0;
+      currentOffsetX = 0;
+
+      render();
+      updateTopBarOnScroll();
+      resetTopBarTimer();
+
+      // light auto refresh status/results
+      setInterval(async () => {
+        await fetchSiteStatus();
+        resultsMap = await fetchResultsForView();
+        // обновим только текст кнопки/режим (проще — rerender)
+        render();
+      }, 10000);
+
+      window.addEventListener("resize", () => {
+        recalcCardLayout();
+        const track = document.getElementById("carousel-track");
+        if (track) {
+          track.querySelectorAll(".nomination-card-outer").forEach((wrapper) => {
+            wrapper.style.width = CARD_WIDTH + "px";
+            wrapper.style.flex = `0 0 ${CARD_WIDTH}px`;
+          });
+        }
+        updateImageScales();
+        updateTrackPosition(false, virtualIndex);
+      });
+    } catch (e) {
+      console.error(e);
+      root.innerHTML = "<div>Ошибка загрузки :(</div>";
+    }
+  }
+
+  modal.addEventListener("click", (e) => { if (e.target === modal) closeModal(); });
+
+  window.addEventListener("scroll", () => { updateTopBarOnScroll(); resetTopBarTimer(); });
+  ["mousemove","touchstart","touchmove"].forEach((evt) => {
+    window.addEventListener(evt, () => { resetTopBarTimer(); }, { passive: true });
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (modal.style.display === "flex") return;
+    const tag = (e.target && e.target.tagName) || "";
+    const t = tag.toLowerCase();
+    if (t === "input" || t === "textarea" || t === "select" || (e.target && e.target.isContentEditable)) return;
+    if (e.key === "ArrowRight") { e.preventDefault(); moveCarousel(1); }
+    else if (e.key === "ArrowLeft") { e.preventDefault(); moveCarousel(-1); }
+  });
+
+  init();
 })();
 </script>
+
+<!-- mods.js for tilt -->
+<script>
+  (function () {
+    if (window.tilt && typeof window.tilt.init === "function") return;
+    var s = document.createElement("script");
+    s.src = "https://cdn.postnikovmd.com/tilda@1.4/mods.min.js";
+    s.async = true;
+    document.head.appendChild(s);
+  })();
+</script>
+
+</body>
+</html>
