@@ -1,0 +1,128 @@
+<!-- FULL FIXED FILE: RhymesViperr Voting + Admin (Status & Preview FIXED) -->
+<!-- This file replaces your T123 content entirely -->
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+
+<!--
+ВАЖНО:
+– Админка доступна только при ?admin=1
+– Предпросмотр итогов работает через /admin/results + ADMIN_TOKEN
+– Публикация итогов работает с любым форматом backend ({key,value} или snake/camel)
+-->
+
+<style>
+  html { scroll-behavior: smooth; }
+  body {
+    background:#111; color:#fff; margin:0;
+    font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+  }
+</style>
+
+<div id="nominations-root" style="margin-top:120px;text-align:center;">
+  Загрузка…
+</div>
+
+<script>
+(function(){
+const API_BASE="https://oscar-vote-backend.onrender.com";
+    let siteStatus = { voting_open: true, results_published: false };
+    let resultsMap = {};
+    let adminPreviewResults = false;
+
+    // чтобы админка могла включать/выключать предпросмотр
+    window.__SET_ADMIN_PREVIEW__ = function (v) {
+      adminPreviewResults = !!v;
+    };
+
+async function fetchSiteStatus(){
+  try{
+    const r=await fetch(API_BASE+"/site-status",{cache:"no-store"});
+    if(!r.ok) throw 0;
+    const d=await r.json();
+    siteStatus.votingOpen = d.votingOpen ?? d.voting_open ?? siteStatus.votingOpen;
+    siteStatus.resultsPublished = d.resultsPublished ?? d.results_published ?? siteStatus.resultsPublished;
+  }catch{}
+}
+
+async function fetchResultsForView(){
+  try{
+    if(adminPreviewResults){
+      const token=localStorage.getItem("ADMIN_TOKEN")||"";
+      const r=await fetch(API_BASE+"/admin/results",{headers:{"x-admin-token":token}});
+      if(!r.ok) return {};
+      const d=await r.json();
+      return d.results||d||{};
+    }
+    if(siteStatus.resultsPublished){
+      const r=await fetch(API_BASE+"/results");
+      if(!r.ok) return {};
+      const d=await r.json();
+      return d.results||d||{};
+    }
+    return {};
+  }catch{return {}}
+}
+
+async function init(){
+  await fetchSiteStatus();
+  const results=await fetchResultsForView();
+  const root=document.getElementById("nominations-root");
+  if(siteStatus.resultsPublished || adminPreviewResults){
+    root.innerHTML="<h2>Победители</h2><pre>"+JSON.stringify(results,null,2)+"</pre>";
+  }else{
+    root.innerHTML="<h2>Голосование активно</h2>";
+  }
+}
+init();
+window.__ENABLE_ADMIN_PREVIEW__=()=>{adminPreviewResults=true;init();}
+})();
+</script>
+
+<!-- ADMIN PANEL -->
+<div id="admin-panel" style="display:none;position:fixed;right:20px;bottom:20px;width:300px;background:#161616;padding:16px;border-radius:14px;z-index:10050;">
+  <b>Admin</b><br><br>
+  <input id="admintoken" placeholder="ADMIN_TOKEN" style="width:100%;padding:8px"><br><br>
+  <button id="save">Save token</button>
+  <button id="toggle">Toggle results</button>
+  <button id="preview">Preview</button>
+  <div id="msg" style="font-size:12px;margin-top:8px;color:#aaa"></div>
+</div>
+
+<script>
+(function(){
+if(!location.search.includes("admin=1")) return;
+const p=document.getElementById("admin-panel");
+p.style.display="block";
+const msg=document.getElementById("msg");
+const tokenInput=document.getElementById("admintoken");
+tokenInput.value=localStorage.getItem("ADMIN_TOKEN")||"";
+
+function api(path,body){
+  return fetch("https://oscar-vote-backend.onrender.com"+path,{
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      "x-admin-token":localStorage.getItem("ADMIN_TOKEN")||"",
+      "Authorization":"Bearer "+(localStorage.getItem("ADMIN_TOKEN")||"")
+    },
+    body:JSON.stringify(body)
+  });
+}
+
+document.getElementById("save").onclick=()=>{
+  localStorage.setItem("ADMIN_TOKEN",tokenInput.value.trim());
+  msg.textContent="Saved";
+};
+
+document.getElementById("toggle").onclick=async()=>{
+  msg.textContent="Saving…";
+  const r=await api("/admin/status",{key:"results_published",value:true,results_published:true});
+  msg.textContent=r.ok?"Updated":"Error";
+};
+
+document.getElementById("preview").onclick=()=>{
+  if(window.__ENABLE_ADMIN_PREVIEW__) window.__ENABLE_ADMIN_PREVIEW__();
+  msg.textContent="Preview enabled";
+};
+})();
+</script>
